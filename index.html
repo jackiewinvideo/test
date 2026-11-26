@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#e9f2ed">
+  <title>番茄時間 | 專注此刻</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap');
+
+    :root {
+      color-scheme: light;
+      --paper: #e9f2ed;
+      --ink: #1c332d;
+      --muted: #71847c;
+      --line: #cfddd5;
+      --panel: #f7faf7;
+      --green: #2f6d58;
+      --green-dark: #214f40;
+      --coral: #e96850;
+      --yellow: #eac75c;
+      --blue: #6389a4;
+      --ring-track: #d7e3dc;
+      font-family: "DM Sans", "Noto Sans TC", sans-serif;
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      color: var(--ink);
+      background-color: var(--paper);
+      background-image: radial-gradient(#b8ccc0 0.65px, transparent 0.65px);
+      background-size: 15px 15px;
+    }
+
+    button, input { font: inherit; }
+    button { color: inherit; }
+    button:focus-visible, input:focus-visible { outline: 3px solid #e9685070; outline-offset: 3px; }
+
+    .app-shell { width: min(1120px, calc(100% - 64px)); margin: 0 auto; }
+    .topbar {
+      height: 88px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+    }
+    .brand { display: flex; align-items: center; gap: 12px; font-size: 16px; font-weight: 800; letter-spacing: 0; }
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 12px 12px 12px 4px;
+      background: var(--coral);
+      color: white;
+      font-size: 18px;
+      transform: rotate(-5deg);
+    }
+    .topbar-right { display: flex; align-items: center; gap: 24px; color: var(--muted); font-size: 13px; }
+    .today { color: var(--ink); font-weight: 600; }
+    .streak { display: flex; align-items: center; gap: 8px; padding-left: 22px; border-left: 1px solid var(--line); }
+    .streak b { color: var(--coral); font-family: "DM Mono", monospace; font-size: 16px; }
+
+    main { padding: 46px 0 54px; }
+    .intro { display: flex; justify-content: space-between; align-items: end; margin-bottom: 25px; }
+    .eyebrow { margin: 0 0 9px; color: var(--green); font-size: 11px; font-weight: 700; letter-spacing: 1.7px; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(24px, 3vw, 34px); line-height: 1.25; letter-spacing: 0; }
+    .date-note { color: var(--muted); font-size: 13px; }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1.55fr) minmax(290px, .85fr);
+      min-height: 536px;
+      overflow: hidden;
+      border: 1px solid #c8d8cf;
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: 0 16px 45px #294b3910;
+    }
+    .timer-panel { position: relative; display: flex; flex-direction: column; align-items: center; padding: 36px 36px 30px; }
+    .timer-panel::before { position: absolute; top: 0; left: 0; width: 5px; height: 100%; background: var(--coral); content: ""; }
+    .mode-tabs { display: flex; gap: 5px; padding: 5px; border: 1px solid var(--line); border-radius: 7px; background: #edf3ef; }
+    .mode-tab { min-height: 36px; padding: 0 15px; border: 0; border-radius: 4px; background: transparent; color: var(--muted); cursor: pointer; font-size: 12px; font-weight: 600; transition: background .2s, color .2s; }
+    .mode-tab[aria-pressed="true"] { background: var(--green); color: #fff; box-shadow: 0 2px 6px #214f4030; }
+
+    .timer-wrap { position: relative; display: grid; place-items: center; width: 300px; height: 300px; margin: 24px 0 19px; }
+    .timer-ring { width: 100%; height: 100%; overflow: visible; transform: rotate(-90deg); }
+    .ring-base, .ring-progress { fill: none; stroke-width: 5; }
+    .ring-base { stroke: var(--ring-track); }
+    .ring-progress { stroke: var(--coral); stroke-linecap: round; stroke-dasharray: 628.3; stroke-dashoffset: 0; transition: stroke-dashoffset .45s ease, stroke .25s ease; }
+    .timer-content { position: absolute; display: flex; flex-direction: column; align-items: center; }
+    .timer-caption { margin-bottom: 3px; color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: .5px; }
+    .time-display { font-family: "DM Mono", monospace; font-size: 67px; font-weight: 500; line-height: 1.15; font-variant-numeric: tabular-nums; letter-spacing: 0; }
+    .session-count { display: flex; align-items: center; gap: 7px; margin-top: 8px; color: var(--muted); font-size: 12px; }
+    .tomato-dots { display: flex; gap: 5px; }
+    .tomato-dot { width: 7px; height: 7px; border: 1px solid #e9a293; border-radius: 50%; }
+    .tomato-dot.filled { border-color: var(--coral); background: var(--coral); }
+
+    .timer-controls { display: flex; align-items: center; gap: 14px; }
+    .primary-button { min-width: 148px; height: 48px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; border: 0; border-radius: 5px; background: var(--coral); color: white; cursor: pointer; font-size: 14px; font-weight: 700; box-shadow: 0 5px 12px #e9685030; transition: transform .18s, background .18s; }
+    .primary-button:hover { transform: translateY(-2px); background: #d95841; }
+    .icon-button { display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid var(--line); border-radius: 5px; background: transparent; color: var(--muted); cursor: pointer; font-size: 19px; transition: background .18s, color .18s; }
+    .icon-button:hover { background: #edf3ef; color: var(--ink); }
+    .duration-control { display: flex; align-items: center; gap: 13px; margin-top: 19px; color: var(--muted); font-size: 12px; }
+    .duration-control button { width: 25px; height: 25px; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: transparent; color: var(--ink); cursor: pointer; line-height: 1; }
+    .duration-control button:hover { border-color: var(--green); color: var(--green); }
+    .duration-control strong { min-width: 48px; color: var(--ink); font-family: "DM Mono", monospace; font-size: 13px; text-align: center; }
+
+    .tasks-panel { padding: 33px 27px 25px; border-left: 1px solid var(--line); background: #f1f6f2; }
+    .tasks-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+    .tasks-heading h2 { margin: 0; font-size: 17px; letter-spacing: 0; }
+    .tasks-heading span { color: var(--muted); font-family: "DM Mono", monospace; font-size: 12px; }
+    .task-form { display: flex; gap: 7px; margin-bottom: 23px; }
+    .task-input { min-width: 0; flex: 1; height: 42px; padding: 0 12px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); color: var(--ink); font-size: 13px; }
+    .task-input::placeholder { color: #9baa9f; }
+    .add-button { width: 42px; height: 42px; border: 0; border-radius: 4px; background: var(--green); color: white; cursor: pointer; font-size: 22px; line-height: 1; }
+    .add-button:hover { background: var(--green-dark); }
+    .task-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+    .task-item { display: flex; align-items: center; gap: 11px; min-height: 48px; padding: 8px 10px; border: 1px solid #dce6df; border-radius: 4px; background: #fbfcfb; animation: appear .24s ease both; }
+    .task-check { appearance: none; width: 17px; height: 17px; flex: 0 0 17px; margin: 0; border: 1px solid #aebfb4; border-radius: 50%; cursor: pointer; }
+    .task-check:checked { border: 5px solid var(--green); }
+    .task-name { min-width: 0; flex: 1; overflow-wrap: anywhere; color: #43584e; font-size: 12px; line-height: 1.45; }
+    .task-item.done .task-name { color: #9baa9f; text-decoration: line-through; }
+    .delete-task { width: 26px; height: 26px; border: 0; border-radius: 3px; background: transparent; color: #9baa9f; cursor: pointer; font-size: 16px; }
+    .delete-task:hover { background: #f7e7e3; color: var(--coral); }
+    .empty-state { padding: 28px 8px; color: #8b9b91; font-size: 12px; text-align: center; }
+    .task-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 18px; padding-top: 15px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; }
+    .clear-button { padding: 4px 0 4px 8px; border: 0; background: transparent; color: var(--green); cursor: pointer; font-size: 11px; }
+    .clear-button:hover { text-decoration: underline; }
+
+    .bottomline { display: flex; justify-content: space-between; align-items: center; padding-top: 18px; color: var(--muted); font-size: 11px; }
+    .sound-toggle { display: inline-flex; align-items: center; gap: 8px; border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 11px; }
+    .sound-icon { font-size: 15px; }
+    .toast { position: fixed; right: 24px; bottom: 24px; z-index: 3; padding: 12px 17px; border-radius: 5px; background: var(--ink); color: white; font-size: 13px; opacity: 0; pointer-events: none; transform: translateY(8px); transition: opacity .2s, transform .2s; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    @keyframes appear { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+    @media (max-width: 760px) {
+      .app-shell { width: min(100% - 32px, 560px); }
+      .topbar { height: 70px; }
+      .topbar-right { gap: 12px; }
+      .streak { padding-left: 12px; }
+      main { padding: 31px 0 28px; }
+      .intro { margin-bottom: 18px; }
+      .date-note { display: none; }
+      .workspace { grid-template-columns: 1fr; }
+      .timer-panel { padding: 28px 18px 26px; }
+      .tasks-panel { padding: 25px 20px 20px; border-top: 1px solid var(--line); border-left: 0; }
+      .timer-wrap { width: min(280px, 78vw); height: min(280px, 78vw); margin: 19px 0 14px; }
+      .time-display { font-size: 61px; }
+      .bottomline { gap: 14px; align-items: flex-start; }
+    }
+    @media (max-width: 390px) {
+      .app-shell { width: calc(100% - 24px); }
+      .mode-tab { padding: 0 10px; font-size: 11px; }
+      .timer-panel { padding-right: 12px; padding-left: 12px; }
+      .time-display { font-size: 56px; }
+      .today { font-size: 11px; }
+      .topbar-right { gap: 9px; }
+      .streak { gap: 5px; padding-left: 9px; font-size: 11px; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">●</span><span>番茄時間</span></div>
+      <div class="topbar-right">
+        <span class="today" id="today"></span>
+        <span class="streak"><span aria-hidden="true">✦</span><span>今日完成</span><b id="daily-count">0</b></span>
+      </div>
+    </header>
+
+    <main>
+      <div class="intro">
+        <div><p class="eyebrow">FOCUS / REST / REPEAT</p><h1>把注意力，留在此刻。</h1></div>
+        <span class="date-note">一件事，一段時間，慢慢完成。</span>
+      </div>
+
+      <section class="workspace" aria-label="番茄鐘工作區">
+        <section class="timer-panel" aria-label="計時器">
+          <div class="mode-tabs" role="group" aria-label="計時模式">
+            <button class="mode-tab" data-mode="focus" aria-pressed="true">專注</button>
+            <button class="mode-tab" data-mode="short" aria-pressed="false">短休息</button>
+            <button class="mode-tab" data-mode="long" aria-pressed="false">長休息</button>
+          </div>
+
+          <div class="timer-wrap" aria-live="off">
+            <svg class="timer-ring" viewBox="0 0 220 220" aria-hidden="true">
+              <circle class="ring-base" cx="110" cy="110" r="100"></circle>
+              <circle class="ring-progress" id="ring-progress" cx="110" cy="110" r="100"></circle>
+            </svg>
+            <div class="timer-content">
+              <span class="timer-caption" id="timer-caption">專注時間</span>
+              <span class="time-display" id="time-display">25:00</span>
+              <div class="session-count"><span>本輪</span><span class="tomato-dots" id="tomato-dots" aria-label="完成番茄數"></span><span id="session-label">0 / 4</span></div>
+            </div>
+          </div>
+
+          <div class="timer-controls">
+            <button class="icon-button" id="reset-button" type="button" title="重設計時器" aria-label="重設計時器">↺</button>
+            <button class="primary-button" id="start-button" type="button"><span aria-hidden="true">▶</span><span>開始專注</span></button>
+            <button class="icon-button" id="skip-button" type="button" title="跳過此階段" aria-label="跳過此階段">↷</button>
+          </div>
+
+          <div class="duration-control" aria-label="調整目前階段長度">
+            <span>時長</span>
+            <button id="decrease-button" type="button" aria-label="減少一分鐘">−</button>
+            <strong id="duration-value">25 分鐘</strong>
+            <button id="increase-button" type="button" aria-label="增加一分鐘">+</button>
+          </div>
+        </section>
+
+        <aside class="tasks-panel" aria-label="任務清單">
+          <div class="tasks-heading"><h2>待辦清單</h2><span id="task-progress">0 / 0</span></div>
+          <form class="task-form" id="task-form">
+            <input class="task-input" id="task-input" type="text" maxlength="100" placeholder="新增一項任務..." aria-label="新增任務" autocomplete="off">
+            <button class="add-button" type="submit" title="新增任務" aria-label="新增任務">+</button>
+          </form>
+          <ul class="task-list" id="task-list"></ul>
+          <div class="task-footer"><span id="remaining-tasks">今天也可以慢慢來</span><button class="clear-button" id="clear-completed" type="button">清除已完成</button></div>
+        </aside>
+      </section>
+
+      <div class="bottomline">
+        <span>專注之間，也記得讓自己喘口氣。</span>
+        <button class="sound-toggle" id="sound-toggle" type="button" aria-pressed="false"><span class="sound-icon" aria-hidden="true">♩</span><span>提示音關閉</span></button>
+      </div>
+    </main>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    (() => {
+      const defaults = { focus: 25, short: 5, long: 15 };
+      const names = { focus: "專注時間", short: "短休息", long: "長休息" };
+      const colors = { focus: "#e96850", short: "#6389a4", long: "#2f6d58" };
+      const storageKey = "pomodoro-desk-v1";
+      const readStore = () => {
+        try { return JSON.parse(localStorage.getItem(storageKey)) || {}; }
+        catch { return {}; }
+      };
+      const saved = readStore();
+      const state = {
+        mode: defaults[saved.mode] ? saved.mode : "focus",
+        durations: { ...defaults, ...(saved.durations || {}) },
+        remaining: Number.isFinite(saved.remaining) ? saved.remaining : defaults.focus * 60,
+        running: false,
+        endAt: null,
+        sessions: Number.isInteger(saved.sessions) ? saved.sessions : 0,
+        tasks: Array.isArray(saved.tasks) ? saved.tasks : [],
+        sound: Boolean(saved.sound),
+        date: saved.date || ""
+      };
+      const $ = (selector) => document.querySelector(selector);
+      const display = $("#time-display");
+      const ring = $("#ring-progress");
+      const startButton = $("#start-button");
+      const toast = $("#toast");
+      let ticker = null;
+      let toastTimer = null;
+      let audioContext;
+
+      const todayKey = new Date().toLocaleDateString("sv-SE");
+      if (state.date !== todayKey) {
+        state.sessions = 0;
+        state.date = todayKey;
+      }
+      $("#today").textContent = new Intl.DateTimeFormat("zh-TW", { month: "long", day: "numeric", weekday: "long" }).format(new Date());
+
+      function save() {
+        localStorage.setItem(storageKey, JSON.stringify({
+          mode: state.mode, durations: state.durations, remaining: state.remaining,
+          sessions: state.sessions, tasks: state.tasks, sound: state.sound, date: state.date
+        }));
+      }
+
+      function formatTime(seconds) {
+        const minutes = Math.floor(seconds / 60).toString().padStart(2, "0");
+        const remainder = (seconds % 60).toString().padStart(2, "0");
+        return `${minutes}:${remainder}`;
+      }
+
+      function renderTimer() {
+        const fullDuration = state.durations[state.mode] * 60;
+        display.textContent = formatTime(state.remaining);
+        $("#timer-caption").textContent = names[state.mode];
+        $("#duration-value").textContent = `${state.durations[state.mode]} 分鐘`;
+        $("#session-label").textContent = `${state.sessions % 4} / 4`;
+        $("#daily-count").textContent = state.sessions;
+        ring.style.stroke = colors[state.mode];
+        ring.style.strokeDashoffset = `${628.3 * (1 - state.remaining / fullDuration)}`;
+        document.querySelectorAll(".mode-tab").forEach((button) => {
+          button.setAttribute("aria-pressed", String(button.dataset.mode === state.mode));
+        });
+        $("#tomato-dots").innerHTML = Array.from({ length: 4 }, (_, index) => `<span class="tomato-dot ${index < state.sessions % 4 ? "filled" : ""}"></span>`).join("");
+        const startLabel = state.mode === "focus" ? "開始專注" : "開始休息";
+        startButton.innerHTML = state.running ? '<span aria-hidden="true">Ⅱ</span><span>暫停</span>' : `<span aria-hidden="true">▶</span><span>${startLabel}</span>`;
+        document.title = `${formatTime(state.remaining)} · ${names[state.mode]} | 番茄時間`;
+      }
+
+      function renderTasks() {
+        const list = $("#task-list");
+        list.replaceChildren();
+        state.tasks.forEach((task) => {
+          const item = document.createElement("li");
+          item.className = `task-item${task.done ? " done" : ""}`;
+          const check = document.createElement("input");
+          check.className = "task-check";
+          check.type = "checkbox";
+          check.checked = task.done;
+          check.setAttribute("aria-label", `完成任務：${task.text}`);
+          check.addEventListener("change", () => {
+            task.done = check.checked;
+            save();
+            renderTasks();
+          });
+          const name = document.createElement("span");
+          name.className = "task-name";
+          name.textContent = task.text;
+          const remove = document.createElement("button");
+          remove.className = "delete-task";
+          remove.type = "button";
+          remove.textContent = "×";
+          remove.title = "刪除任務";
+          remove.setAttribute("aria-label", `刪除任務：${task.text}`);
+          remove.addEventListener("click", () => {
+            state.tasks = state.tasks.filter((entry) => entry.id !== task.id);
+            save();
+            renderTasks();
+          });
+          item.append(check, name, remove);
+          list.append(item);
+        });
+        if (!state.tasks.length) {
+          const empty = document.createElement("li");
+          empty.className = "empty-state";
+          empty.textContent = "寫下第一件想完成的事";
+          list.append(empty);
+        }
+        const done = state.tasks.filter((task) => task.done).length;
+        $("#task-progress").textContent = `${done} / ${state.tasks.length}`;
+        $("#remaining-tasks").textContent = state.tasks.length ? `還有 ${state.tasks.length - done} 件待完成` : "今天也可以慢慢來";
+      }
+
+      function showToast(message) {
+        toast.textContent = message;
+        toast.classList.add("show");
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove("show"), 2400);
+      }
+
+      function playChime() {
+        if (!state.sound) return;
+        try {
+          audioContext ||= new AudioContext();
+          [660, 880].forEach((frequency, index) => {
+            const oscillator = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            oscillator.frequency.value = frequency;
+            oscillator.connect(gain);
+            gain.connect(audioContext.destination);
+            gain.gain.setValueAtTime(0.0001, audioContext.currentTime + index * 0.18);
+            gain.gain.exponentialRampToValueAtTime(0.12, audioContext.currentTime + index * 0.18 + 0.03);
+            gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + index * 0.18 + 0.32);
+            oscillator.start(audioContext.currentTime + index * 0.18);
+            oscillator.stop(audioContext.currentTime + index * 0.18 + 0.34);
+          });
+        } catch { /* Audio is optional; the timer remains usable without it. */ }
+      }
+
+      function setMode(mode) {
+        state.running = false;
+        clearInterval(ticker);
+        state.mode = mode;
+        state.remaining = state.durations[mode] * 60;
+        state.endAt = null;
+        renderTimer();
+        save();
+      }
+
+      function finishPhase() {
+        clearInterval(ticker);
+        state.running = false;
+        state.remaining = 0;
+        if (state.mode === "focus") state.sessions += 1;
+        const nextMode = state.mode === "focus" ? (state.sessions % 4 === 0 ? "long" : "short") : "focus";
+        playChime();
+        showToast(state.mode === "focus" ? "專注完成，休息一下吧。" : "休息結束，準備好再出發。" );
+        state.mode = nextMode;
+        state.remaining = state.durations[nextMode] * 60;
+        state.endAt = null;
+        renderTimer();
+        save();
+      }
+
+      function tick() {
+        state.remaining = Math.max(0, Math.ceil((state.endAt - Date.now()) / 1000));
+        renderTimer();
+        if (state.remaining <= 0) finishPhase();
+      }
+
+      function toggleTimer() {
+        if (state.running) {
+          state.remaining = Math.max(0, Math.ceil((state.endAt - Date.now()) / 1000));
+          state.running = false;
+          clearInterval(ticker);
+          state.endAt = null;
+          save();
+        } else {
+          if (state.remaining <= 0) state.remaining = state.durations[state.mode] * 60;
+          state.running = true;
+          state.endAt = Date.now() + state.remaining * 1000;
+          ticker = setInterval(tick, 250);
+        }
+        renderTimer();
+      }
+
+      document.querySelectorAll(".mode-tab").forEach((button) => button.addEventListener("click", () => setMode(button.dataset.mode)));
+      startButton.addEventListener("click", toggleTimer);
+      $("#reset-button").addEventListener("click", () => {
+        state.running = false;
+        clearInterval(ticker);
+        state.remaining = state.durations[state.mode] * 60;
+        state.endAt = null;
+        renderTimer();
+        save();
+      });
+      $("#skip-button").addEventListener("click", () => {
+        if (state.mode === "focus") state.sessions += 1;
+        const nextMode = state.mode === "focus" ? (state.sessions % 4 === 0 ? "long" : "short") : "focus";
+        setMode(nextMode);
+        showToast(`已切換至${names[nextMode]}`);
+      });
+      [ ["#decrease-button", -1], ["#increase-button", 1] ].forEach(([selector, delta]) => {
+        $(selector).addEventListener("click", () => {
+          if (state.running) return;
+          state.durations[state.mode] = Math.min(90, Math.max(1, state.durations[state.mode] + delta));
+          state.remaining = state.durations[state.mode] * 60;
+          renderTimer();
+          save();
+        });
+      });
+      $("#task-form").addEventListener("submit", (event) => {
+        event.preventDefault();
+        const input = $("#task-input");
+        const text = input.value.trim();
+        if (!text) { input.focus(); return; }
+        state.tasks.push({ id: `${Date.now()}-${Math.random().toString(16).slice(2)}`, text, done: false });
+        input.value = "";
+        save();
+        renderTasks();
+        input.focus();
+      });
+      $("#clear-completed").addEventListener("click", () => {
+        state.tasks = state.tasks.filter((task) => !task.done);
+        save();
+        renderTasks();
+      });
+      $("#sound-toggle").addEventListener("click", (event) => {
+        state.sound = !state.sound;
+        event.currentTarget.setAttribute("aria-pressed", String(state.sound));
+        event.currentTarget.querySelector("span:last-child").textContent = state.sound ? "提示音開啟" : "提示音關閉";
+        save();
+      });
+      document.addEventListener("visibilitychange", () => { if (!document.hidden && state.running) tick(); });
+
+      renderTimer();
+      renderTasks();
+      $("#sound-toggle").setAttribute("aria-pressed", String(state.sound));
+      $("#sound-toggle span:last-child").textContent = state.sound ? "提示音開啟" : "提示音關閉";
+      save();
+    })();
+  </script>
+</body>
+</html>
